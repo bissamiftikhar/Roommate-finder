@@ -1,0 +1,259 @@
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Student Table
+CREATE TABLE student (
+  student_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  status VARCHAR(20) CHECK (status IN ('active', 'inactive', 'suspended')) DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login TIMESTAMPTZ
+);
+
+-- Admin Table
+CREATE TABLE admin (
+  admin_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Profile Table
+CREATE TABLE profile (
+  profile_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID UNIQUE REFERENCES student(student_id) ON DELETE CASCADE,
+  age INT CHECK (age >= 18 AND age <= 100),
+  gender VARCHAR(50) CHECK (gender IN ('male', 'female', 'other', 'prefer_not_to_say')),
+  personal_email VARCHAR(255),
+  bio TEXT,
+  phone VARCHAR(20),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Basic Preference Table
+CREATE TABLE basic_preference (
+  preference_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID UNIQUE REFERENCES student(student_id) ON DELETE CASCADE,
+  gender_preference VARCHAR(20) CHECK (gender_preference IN ('any', 'male', 'female', 'other')),
+  age_min INT CHECK (age_min >= 18),
+  age_max INT CHECK (age_max <= 100),
+  budget_min DECIMAL(10,2) CHECK (budget_min >= 0),
+  budget_max DECIMAL(10,2) CHECK (budget_max >= budget_min),
+  location_preference VARCHAR(255)
+);
+
+-- Lifestyle Preference Table
+CREATE TABLE lifestyle_preference (
+  lifestyle_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID UNIQUE REFERENCES student(student_id) ON DELETE CASCADE,
+  sleep_schedule VARCHAR(20) CHECK (sleep_schedule IN ('early_bird', 'normal', 'night_owl', 'flexible')),
+  cleanliness VARCHAR(20) CHECK (cleanliness IN ('very_clean', 'moderate', 'relaxed')),
+  guest_policy VARCHAR(20) CHECK (guest_policy IN ('never', 'rarely', 'sometimes', 'often')),
+  smoking BOOLEAN DEFAULT FALSE,
+  pets BOOLEAN DEFAULT FALSE,
+  noise_tolerance VARCHAR(20) CHECK (noise_tolerance IN ('quiet', 'moderate', 'loud')),
+  study_habits VARCHAR(20) CHECK (study_habits IN ('library', 'home', 'flexible'))
+);
+
+-- Match Request Table
+CREATE TABLE match_request (
+  request_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sender_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  receiver_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')) DEFAULT 'pending',
+  message TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(sender_id, receiver_id),
+  CHECK (sender_id != receiver_id)
+);
+
+-- Match Table
+CREATE TABLE match (
+  match_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student1_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  student2_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  compatibility_score DECIMAL(5,2) CHECK (compatibility_score >= 0 AND compatibility_score <= 100),
+  status VARCHAR(20) CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+  matched_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (student1_id < student2_id)
+);
+
+-- Message Table
+CREATE TABLE message (
+  message_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  match_id UUID REFERENCES match(match_id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  is_read BOOLEAN DEFAULT FALSE
+);
+
+-- Notification Table
+CREATE TABLE notification (
+  notification_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  type VARCHAR(30) CHECK (type IN ('match_request', 'message', 'system', 'report_update')),
+  content TEXT,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Report Table
+CREATE TABLE report (
+  report_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  reporter_id UUID REFERENCES student(student_id) ON DELETE SET NULL,
+  reported_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  status VARCHAR(20) CHECK (status IN ('pending', 'under_review', 'resolved', 'dismissed')) DEFAULT 'pending',
+  admin_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ,
+  resolved_by UUID REFERENCES admin(admin_id) ON DELETE SET NULL
+);
+
+-- Block Table
+CREATE TABLE block (
+  block_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  blocker_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  blocked_id UUID REFERENCES student(student_id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(blocker_id, blocked_id),
+  CHECK (blocker_id != blocked_id)
+);
+
+
+
+
+-- Student indexes
+CREATE INDEX idx_student_email ON student(student_email);
+CREATE INDEX idx_student_status ON student(status);
+
+-- Profile indexes
+CREATE INDEX idx_profile_student_id ON profile(student_id);
+
+-- Match request indexes
+CREATE INDEX idx_match_request_sender ON match_request(sender_id);
+CREATE INDEX idx_match_request_receiver ON match_request(receiver_id);
+CREATE INDEX idx_match_request_status ON match_request(status);
+
+-- Match indexes
+CREATE INDEX idx_match_student1 ON match(student1_id);
+CREATE INDEX idx_match_student2 ON match(student2_id);
+CREATE INDEX idx_match_status ON match(status);
+
+-- Message indexes
+CREATE INDEX idx_message_match_id ON message(match_id);
+CREATE INDEX idx_message_sender_id ON message(sender_id);
+CREATE INDEX idx_message_sent_at ON message(sent_at DESC);
+
+-- Notification indexes
+CREATE INDEX idx_notification_student_id ON notification(student_id);
+CREATE INDEX idx_notification_is_read ON notification(is_read);
+CREATE INDEX idx_notification_created_at ON notification(created_at DESC);
+
+-- Report indexes
+CREATE INDEX idx_report_reported_id ON report(reported_id);
+CREATE INDEX idx_report_status ON report(status);
+
+-- Block indexes
+CREATE INDEX idx_block_blocker_id ON block(blocker_id);
+CREATE INDEX idx_block_blocked_id ON block(blocked_id);
+
+
+-- Function to create a match when request is accepted
+CREATE OR REPLACE FUNCTION create_match_from_request()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'accepted' AND OLD.status = 'pending' THEN
+    INSERT INTO match (student1_id, student2_id, compatibility_score, status)
+    VALUES (
+      LEAST(NEW.sender_id, NEW.receiver_id),
+      GREATEST(NEW.sender_id, NEW.receiver_id),
+      0, -- You can calculate this based on preferences
+      'active'
+    );
+    
+    -- Create notifications for both students
+    INSERT INTO notification (student_id, type, content)
+    VALUES 
+      (NEW.sender_id, 'match_request', 'Your match request was accepted!'),
+      (NEW.receiver_id, 'match_request', 'You accepted a match request!');
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for auto-creating matches
+CREATE TRIGGER trigger_create_match
+AFTER UPDATE ON match_request
+FOR EACH ROW
+EXECUTE FUNCTION create_match_from_request();
+
+-- Function to update timestamp
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for match_request updated_at
+CREATE TRIGGER trigger_match_request_updated_at
+BEFORE UPDATE ON match_request
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Trigger for profile updated_at
+CREATE TRIGGER trigger_profile_updated_at
+BEFORE UPDATE ON profile
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Function to create notification when new message is sent
+CREATE OR REPLACE FUNCTION notify_new_message()
+RETURNS TRIGGER AS $$
+DECLARE
+  recipient_id UUID;
+BEGIN
+  -- Get the recipient (the other person in the match)
+  SELECT CASE 
+    WHEN match.student1_id = NEW.sender_id THEN match.student2_id
+    ELSE match.student1_id
+  END INTO recipient_id
+  FROM match
+  WHERE match.match_id = NEW.match_id;
+  
+  -- Create notification for recipient
+  INSERT INTO notification (student_id, type, content)
+  VALUES (recipient_id, 'message', 'You have a new message!');
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for new message notification
+CREATE TRIGGER trigger_new_message_notification
+AFTER INSERT ON message
+FOR EACH ROW
+EXECUTE FUNCTION notify_new_message();
+
+-- Function to create notification for new match request
+CREATE OR REPLACE FUNCTION notify_match_request()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO notification (student_id, type, content)
+  VALUES (NEW.receiver_id, 'match_request', 'You have a new match request!');
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for match request notification
+CREATE TRIGGER trigger_match_request_notification
+AFTER INSERT ON match_request
+FOR EACH ROW
+EXECUTE FUNCTION notify_match_request();
