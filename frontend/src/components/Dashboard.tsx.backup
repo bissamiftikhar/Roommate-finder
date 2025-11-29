@@ -28,9 +28,7 @@ export type DashboardView =
   | 'admin-reports';
 
 export function Dashboard({ user, onLogout }: DashboardProps) {
-  const [currentView, setCurrentView] = useState<DashboardView>(
-    user.role === 'admin' ? 'admin-users' : 'profile'
-  );
+  const [currentView, setCurrentView] = useState<DashboardView>('profile');
 
   const renderView = () => {
     switch (currentView) {
@@ -53,7 +51,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       case 'admin-reports':
         return <AdminReportsView />;
       default:
-        return user.role === 'admin' ? <AdminUsersView /> : <ProfileView user={user} />;
+        return <ProfileView user={user} />;
     }
   };
 
@@ -65,7 +63,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         onViewChange={setCurrentView}
         onLogout={onLogout}
       />
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto">
         {renderView()}
       </main>
     </div>

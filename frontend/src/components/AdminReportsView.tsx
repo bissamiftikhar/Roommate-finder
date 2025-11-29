@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Report, User } from '../App';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Textarea } from './ui/textarea';
 import { 
   Table, 
   TableBody, 
@@ -17,158 +17,94 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from './ui/dialog';
-import { AlertTriangle, Eye, CheckCircle, XCircle } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { AlertTriangle, Eye } from 'lucide-react';
+import { toast } from 'sonner';
+import { adminApi } from '../services/api';
 
-// Mock reports
-const mockReports: Report[] = [
-  {
-    id: '1',
-    reportedUser: {
-      id: '4',
-      email: 'emma.wilson@university.edu',
-      name: 'Emma Wilson',
-      role: 'student',
-      profile: {
-        age: 20,
-        gender: 'Female',
-        bio: 'Art student',
-        university: 'State University',
-        major: 'Fine Arts',
-        year: 'Sophomore',
-      },
-    },
-    reportedBy: {
-      id: '2',
-      email: 'sarah.johnson@university.edu',
-      name: 'Sarah Johnson',
-      role: 'student',
-    },
-    reason: 'Harassment',
-    description: 'User sent inappropriate messages multiple times despite being asked to stop.',
-    status: 'pending',
-    createdAt: '2024-01-20',
-  },
-  {
-    id: '2',
-    reportedUser: {
-      id: '7',
-      email: 'john.doe@university.edu',
-      name: 'John Doe',
-      role: 'student',
-      profile: {
-        age: 23,
-        gender: 'Male',
-        bio: 'Engineering student',
-        university: 'State University',
-        major: 'Engineering',
-        year: 'Senior',
-      },
-    },
-    reportedBy: {
-      id: '6',
-      email: 'lisa.park@university.edu',
-      name: 'Lisa Park',
-      role: 'student',
-    },
-    reason: 'Fake Profile',
-    description: 'Profile information seems fabricated. No verification of student status.',
-    status: 'reviewed',
-    createdAt: '2024-01-18',
-  },
-  {
-    id: '3',
-    reportedUser: {
-      id: '8',
-      email: 'suspicious@email.com',
-      name: 'Suspicious User',
-      role: 'student',
-      profile: {
-        age: 25,
-        gender: 'Male',
-        bio: 'Student',
-        university: 'Unknown',
-        major: 'Unknown',
-        year: 'Unknown',
-      },
-    },
-    reportedBy: {
-      id: '3',
-      email: 'mike.chen@university.edu',
-      name: 'Mike Chen',
-      role: 'student',
-    },
-    reason: 'Spam',
-    description: 'Sending spam messages with external links.',
-    status: 'action_taken',
-    createdAt: '2024-01-15',
-  },
-];
+interface Report {
+  report_id: string;
+  reporter_id: string | null;
+  reported_id: string;
+  reason: string;
+  status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
+  admin_notes: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  reporter: any;
+  reported: any;
+}
 
 export function AdminReportsView() {
-  const [reports, setReports] = useState<Report[]>(mockReports);
+  const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [newStatus, setNewStatus] = useState<string>('');
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      const response = await adminApi.getReports();
+      setReports(response.data);
+    } catch (error: any) {
+      toast.error('Failed to load reports');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleViewReport = (report: Report) => {
     setSelectedReport(report);
+    setAdminNotes(report.admin_notes || '');
+    setNewStatus(report.status);
     setDialogOpen(true);
   };
 
-  const handleMarkReviewed = (reportId: string) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/admin/reports/${reportId}/review`, { method: 'POST' })
+  const handleUpdateReport = async () => {
+    if (!selectedReport) return;
 
-    setReports(
-      reports.map((r) =>
-        r.id === reportId ? { ...r, status: 'reviewed' as const } : r
-      )
-    );
-    toast.success('Report marked as reviewed');
-  };
-
-  const handleTakeAction = (reportId: string) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/admin/reports/${reportId}/action`, { method: 'POST' })
-
-    setReports(
-      reports.map((r) =>
-        r.id === reportId ? { ...r, status: 'action_taken' as const } : r
-      )
-    );
-    toast.success('Action taken on report');
-    setDialogOpen(false);
-  };
-
-  const handleDismiss = (reportId: string) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/admin/reports/${reportId}/dismiss`, { method: 'POST' })
-
-    setReports(reports.filter((r) => r.id !== reportId));
-    toast.success('Report dismissed');
-    setDialogOpen(false);
+    try {
+      await adminApi.updateReport(selectedReport.report_id, newStatus, adminNotes);
+      toast.success('Report updated successfully');
+      setDialogOpen(false);
+      fetchReports();
+    } catch (error: any) {
+      toast.error('Failed to update report');
+    }
   };
 
   const pendingCount = reports.filter((r) => r.status === 'pending').length;
-  const reviewedCount = reports.filter((r) => r.status === 'reviewed').length;
-  const actionTakenCount = reports.filter((r) => r.status === 'action_taken').length;
+  const underReviewCount = reports.filter((r) => r.status === 'under_review').length;
+  const resolvedCount = reports.filter((r) => r.status === 'resolved').length;
 
   const getStatusBadge = (status: Report['status']) => {
     switch (status) {
       case 'pending':
         return <Badge variant="destructive">Pending</Badge>;
-      case 'reviewed':
-        return <Badge variant="secondary">Reviewed</Badge>;
-      case 'action_taken':
-        return <Badge>Action Taken</Badge>;
+      case 'under_review':
+        return <Badge variant="secondary">Under Review</Badge>;
+      case 'resolved':
+        return <Badge>Resolved</Badge>;
+      case 'dismissed':
+        return <Badge variant="outline">Dismissed</Badge>;
     }
   };
+
+  if (loading) {
+    return <div className="p-8">Loading reports...</div>;
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1>Reports & Moderation</h1>
+        <h1 className="text-3xl font-bold">Reports & Moderation</h1>
         <p className="text-muted-foreground">
           Monitor and take action on user reports
         </p>
@@ -185,155 +121,153 @@ export function AdminReportsView() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Reviewed</CardTitle>
+            <CardTitle className="text-sm">Under Review</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl text-yellow-600">{reviewedCount}</p>
+            <p className="text-3xl text-yellow-600">{underReviewCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Action Taken</CardTitle>
+            <CardTitle className="text-sm">Resolved</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl text-green-600">{actionTakenCount}</p>
+            <p className="text-3xl text-green-600">{resolvedCount}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>User Reports</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            Recent Reports
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Reported User</TableHead>
-                <TableHead>Reported By</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell>{report.reportedUser.name}</TableCell>
-                  <TableCell>{report.reportedBy.name}</TableCell>
-                  <TableCell>{report.reason}</TableCell>
-                  <TableCell>{report.createdAt}</TableCell>
-                  <TableCell>{getStatusBadge(report.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      onClick={() => handleViewReport(report)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
-                  </TableCell>
+          {reports.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No reports found</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Reported User</TableHead>
+                  <TableHead>Reporter</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {reports.length === 0 && (
-            <div className="text-center py-12">
-              <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No reports at this time</p>
-            </div>
+              </TableHeader>
+              <TableBody>
+                {reports.map((report) => (
+                  <TableRow key={report.report_id}>
+                    <TableCell>
+                      {new Date(report.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">
+                          {report.reported?.bio || 'No name'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Age: {report.reported?.age || 'N/A'}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {report.reporter ? (
+                        <div>
+                          <p className="text-sm">
+                            {report.reporter.bio || 'Anonymous'}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Anonymous</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <p className="max-w-xs truncate">{report.reason}</p>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(report.status)}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewReport(report)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
-      {/* Report Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Report Details</DialogTitle>
             <DialogDescription>
-              Review the report and take appropriate action
+              Review and take action on this report
             </DialogDescription>
           </DialogHeader>
 
           {selectedReport && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Reported User</p>
-                  <p>{selectedReport.reportedUser.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedReport.reportedUser.email}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Reported By</p>
-                  <p>{selectedReport.reportedBy.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedReport.reportedBy.email}
-                  </p>
+              <div>
+                <h4 className="font-semibold mb-2">Reported User</h4>
+                <div className="p-3 bg-muted rounded">
+                  <p><strong>Bio:</strong> {selectedReport.reported?.bio || 'N/A'}</p>
+                  <p><strong>Age:</strong> {selectedReport.reported?.age || 'N/A'}</p>
+                  <p><strong>Gender:</strong> {selectedReport.reported?.gender || 'N/A'}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground">Reason</p>
-                <p>{selectedReport.reason}</p>
+                <h4 className="font-semibold mb-2">Report Reason</h4>
+                <p className="p-3 bg-muted rounded">{selectedReport.reason}</p>
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground">Description</p>
-                <p>{selectedReport.description}</p>
+                <h4 className="font-semibold mb-2">Status</h4>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="under_review">Under Review</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="dismissed">Dismissed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground">Date Reported</p>
-                <p>{selectedReport.createdAt}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-muted-foreground">Current Status</p>
-                {getStatusBadge(selectedReport.status)}
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                {selectedReport.status === 'pending' && (
-                  <>
-                    <Button
-                      onClick={() => handleMarkReviewed(selectedReport.id)}
-                      variant="outline"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Mark as Reviewed
-                    </Button>
-                    <Button
-                      onClick={() => handleTakeAction(selectedReport.id)}
-                    >
-                      <AlertTriangle className="w-4 h-4 mr-2" />
-                      Take Action (Suspend User)
-                    </Button>
-                  </>
-                )}
-                {selectedReport.status === 'reviewed' && (
-                  <Button
-                    onClick={() => handleTakeAction(selectedReport.id)}
-                  >
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    Take Action (Suspend User)
-                  </Button>
-                )}
-                <Button
-                  onClick={() => handleDismiss(selectedReport.id)}
-                  variant="outline"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Dismiss Report
-                </Button>
+                <h4 className="font-semibold mb-2">Admin Notes</h4>
+                <Textarea
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Add notes about your investigation or action taken..."
+                  rows={4}
+                />
               </div>
             </div>
           )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateReport}>
+              Update Report
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

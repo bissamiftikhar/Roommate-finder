@@ -164,4 +164,72 @@ router.put(
   }
 );
 
+/**
+ * POST /profile/block/:userId
+ * Block a user
+ */
+router.post('/block/:userId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { userId } = req.params;
+
+    if (userId === req.user.student_id) {
+      return res.status(400).json({ error: 'Cannot block yourself' });
+    }
+
+    const block = await db.blockUser(req.user.student_id, userId);
+    res.status(201).json(block);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /profile/block/:userId
+ * Unblock a user
+ */
+router.delete('/block/:userId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { userId } = req.params;
+    await db.unblockUser(req.user.student_id, userId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /profile/report
+ * Report a user
+ */
+router.post('/report', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { reported_id, reason } = req.body;
+
+    if (!reported_id || !reason) {
+      return res.status(400).json({ error: 'reported_id and reason are required' });
+    }
+
+    if (reported_id === req.user.student_id) {
+      return res.status(400).json({ error: 'Cannot report yourself' });
+    }
+
+    const report = await db.createReport(req.user.student_id, reported_id, reason);
+    res.status(201).json(report);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

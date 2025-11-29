@@ -1,369 +1,192 @@
-# 🏠 Roommate Matcher - Complete Setup Guide
+# Roommate Matching Website
 
-## 📚 Overview
+A full-stack web application for university students to find compatible roommates based on preferences, lifestyle habits, and compatibility scoring.
 
-This is a full-stack roommate matching application with:
-- **Backend**: Express.js + TypeScript + Supabase
-- **Frontend**: React + TypeScript + Vite
-- **Database**: PostgreSQL (Supabase)
+## 🎯 Features
 
-The project is ~95% complete. Only Supabase configuration and component file replacement remains.
+### For Students
+- **Profile Management**: Create detailed profiles with age, gender, bio, and contact info
+- **Preference System**: Set preferences for age range, budget, location, gender
+- **Lifestyle Matching**: Define sleep schedule, cleanliness level, smoking/pets policy, guest preferences
+- **Smart Matching Algorithm**: AI-powered compatibility scoring (0-100) based on multiple factors
+- **Match Requests**: Send and receive match requests with personalized messages
+- **Real-time Messaging**: Chat with matched roommates
+- **Notifications**: Get notified of new requests, acceptances, and messages
+- **Block Users**: Block users you don't want to interact with
+- **Report System**: Report inappropriate behavior or fake profiles
 
----
+### For Admins
+- **User Management**: View, suspend, activate, or delete user accounts
+- **Reports Dashboard**: Review and manage user reports
+- **Statistics**: View platform stats (total users, active matches, pending reports)
+- **Moderation Tools**: Add notes to reports, update report status
 
-## ⚡ Quick Start (5 minutes)
+## 🏗️ Tech Stack
 
-### 1. Create Supabase Project
-- Go to [supabase.com](https://supabase.com)
-- Click "New project"
-- Create a new PostgreSQL database
-- Once created, go to **SQL Editor**
+### Frontend
+- **React 18** with TypeScript
+- **Vite** - Fast build tool and dev server
+- **Tailwind CSS** - Utility-first styling
+- **shadcn/ui** - High-quality UI components
+- **Axios** - HTTP client for API calls
+- **Sonner** - Toast notifications
 
-### 2. Import Database Schema
-1. In Supabase SQL Editor, create a new query
-2. Copy the entire content of `/backend/schema.txt`
-3. Paste it into the SQL editor
-4. Click "Run"
-5. Wait for all tables to be created ✅
+### Backend
+- **Node.js 18+** with Express
+- **TypeScript** - Type-safe development
+- **Supabase** - PostgreSQL database with real-time features
+- **JWT** - Secure authentication
+- **bcrypt** - Password hashing
+- **Zod** - Schema validation
 
-### 3. Get Your Credentials
-In Supabase, go to **Settings → API**:
-- Copy `Project URL` → `SUPABASE_URL`
-- Copy `anon public` key → `SUPABASE_KEY`  
-- Copy `service_role` secret → `SUPABASE_SERVICE_KEY`
+## 📊 Database Schema
 
-### 4. Setup Backend .env
-Create `/backend/.env`:
-```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-key-here
-SUPABASE_SERVICE_KEY=your-service-role-key-here
-PORT=3000
-NODE_ENV=development
-JWT_SECRET=your-secret-key-here-change-in-production
-```
+### Tables
+1. **student** - User accounts for students
+2. **admin** - Admin accounts
+3. **profile** - Student profile information
+4. **basic_preference** - Age, gender, budget, location preferences
+5. **lifestyle_preference** - Sleep, cleanliness, pets, smoking, guests
+6. **match_request** - Sent/received match requests
+7. **match** - Confirmed matches between students
+8. **message** - Chat messages
+9. **notification** - System notifications
+10. **report** - User reports for moderation
+11. **block** - Blocked user relationships
 
-### 5. Setup Frontend .env.local
-Create `/frontend/.env.local`:
-```bash
-REACT_APP_API_URL=http://localhost:3000/api
-```
+## 🚀 Getting Started
 
-### 6. Run Backend
-```bash
-cd backend
-npm run dev
-```
-✅ Server running on http://localhost:3000
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account with project created
 
-### 7. Run Frontend (New Terminal)
-```bash
-cd frontend
-npm run dev
-```
-✅ App running on http://localhost:5173
+### Installation
 
----
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/bissamiftikhar/Roommate-finder.git
+   cd "Roommate Matching Website"
+   ```
 
-## 🔧 Update Frontend Components
+2. **Setup Backend**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-The following components need their code replaced. Use the code provided in `/FRONTEND_COMPONENTS.ts`:
+   Create `.env` file:
+   ```env
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
+   PORT=3000
+   JWT_SECRET=your_secret_key_here
+   ```
 
-### Files to Update:
+3. **Setup Frontend**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
 
-1. **PreferencesView.tsx** - Replace entire file
-   - Connects to basic & lifestyle preference APIs
-   - Edit mode for updating preferences
+   Create `.env.local` file:
+   ```env
+   VITE_API_URL=http://localhost:3000/api
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-2. **SearchView.tsx** - Replace entire file  
-   - Shows potential matches with compatibility scores
-   - Swipe-like interface for sending requests
+4. **Setup Database**
+   - Go to your Supabase project SQL Editor
+   - Run the SQL from `backend/schema.txt`
+   - Creates all tables, triggers, and indexes
 
-3. **MatchesView.tsx** - Copy from `FRONTEND_COMPONENTS.ts`
-   - Shows confirmed matches
-   - Lists active conversations
+5. **Create Admin Account**
+   ```bash
+   cd backend
+   npm run seed
+   ```
+   Creates admin: `admin@roommate.com` / `password123`
 
-4. **RequestsView.tsx** - Copy from `FRONTEND_COMPONENTS.ts`
-   - Incoming match requests
-   - Accept/Reject buttons
+### Running the Application
 
-5. **ChatView.tsx** - Copy from `FRONTEND_COMPONENTS.ts`
-   - Real-time messaging between matches
-   - Message history
+1. **Start Backend**
+   ```bash
+   cd backend
+   npm run dev
+   ```
+   Runs on http://localhost:3000
 
-6. **NotificationsView.tsx** - Copy from `FRONTEND_COMPONENTS.ts`
-   - Match requests, messages, system notifications
-   - Mark as read functionality
+2. **Start Frontend** (new terminal)
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   Runs on http://localhost:3001
 
-### How to Update:
+3. **Access Application**
+   - Open http://localhost:3001
+   - Register new student or login as admin
 
-**Option A: Manual (Recommended for learning)**
-1. Open `/FRONTEND_COMPONENTS.ts` 
-2. Find the component you need
-3. Copy all code between `// FILE: ComponentName.tsx` comments
-4. Paste into `frontend/src/components/ComponentName.tsx`
-5. Replace entire file content
-
-**Option B: Automated (If you have a script)**
-```bash
-# Create a script to automatically update components
-# This would read FRONTEND_COMPONENTS.ts and split files
-```
-
----
-
-## 🎯 Test the Application
-
-### 1. Register a New Account
-- Go to http://localhost:5173
-- Click "Register"
-- Enter email and password
-- ✅ Should be logged in
-
-### 2. Setup Profile
-- Click "My Profile"  
-- Click "Edit Profile"
-- Fill in: Age, Gender, Bio, Phone, Email
-- Save ✅
-
-### 3. Setup Preferences
-- Click "Preferences"
-- Set "Basic Preferences" (gender, age range, budget)
-- Set "Lifestyle" preferences
-- Save ✅
-
-### 4. Find Matches
-- Click "Search" or "Find Your Roommate"
-- Browse potential matches
-- Send match requests ✅
-
-### 5. Manage Requests
-- Click "Requests" to see incoming requests
-- Accept or reject requests ✅
-
-### 6. Chat with Matches
-- Click "Chats" after accepting a request
-- Send messages back and forth ✅
-
-### 7. View Notifications  
-- Click "Notifications"
-- See all match requests and messages ✅
-
----
-
-## 📚 API Reference
-
-All endpoints require a `Bearer token` in the `Authorization` header after login.
+## 📖 API Endpoints
 
 ### Authentication
-```
-POST   /api/auth/register        Register new student
-POST   /api/auth/login           Login student
-GET    /api/auth/me              Get current user
-```
+- `POST /api/auth/register` - Register student
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Get current user
 
 ### Profile
-```
-GET    /api/profile              Get profile
-PUT    /api/profile              Update profile
-GET    /api/profile/preferences/basic       Get basic prefs
-PUT    /api/profile/preferences/basic       Update basic prefs
-GET    /api/profile/preferences/lifestyle   Get lifestyle prefs
-PUT    /api/profile/preferences/lifestyle   Update lifestyle prefs
-```
+- `GET/PUT /api/profile` - Profile CRUD
+- `GET/PUT /api/profile/preferences/basic` - Basic preferences
+- `GET/PUT /api/profile/preferences/lifestyle` - Lifestyle preferences
 
 ### Matching
-```
-GET    /api/matches/search       Find potential matches
-GET    /api/matches              Get confirmed matches
-GET    /api/matches/requests     Get match requests
-POST   /api/matches/request      Send match request
-PUT    /api/matches/request/:id  Accept/reject request
-```
+- `GET /api/matches/search` - Find compatible matches
+- `GET /api/matches` - Get confirmed matches
+- `GET /api/matches/requests` - Get match requests
+- `POST /api/matches/request` - Send request
+- `PUT /api/matches/request/:id` - Accept/reject
 
 ### Messaging
-```
-GET    /api/chat/:matchId        Get messages
-POST   /api/chat/:matchId        Send message
-PUT    /api/chat/message/:id/read Mark as read
-```
+- `GET /api/chat/:matchId` - Get messages
+- `POST /api/chat/:matchId` - Send message
+- `PUT /api/chat/message/:id/read` - Mark read
 
-### Notifications
-```
-GET    /api/notifications        Get all notifications
-PUT    /api/notifications/:id/read Mark as read
-```
+### Admin
+- `GET /api/admin/stats` - Dashboard stats
+- `GET /api/admin/users` - All users
+- `PUT /api/admin/users/:id/status` - Suspend/activate
+- `DELETE /api/admin/users/:id` - Delete user
+- `GET /api/admin/reports` - View reports
+- `PUT /api/admin/reports/:id` - Update report
 
----
+## 🧮 Matching Algorithm
+
+Compatibility score (0-100) based on:
+- Age Compatibility: 20%
+- Budget Overlap: 20%
+- Gender Preference: 15%
+- Sleep Schedule: 10%
+- Cleanliness: 10%
+- Smoking/Pets: 10%
+- Guest Policy: 5%
 
 ## 🐛 Troubleshooting
 
-### "Cannot connect to Supabase"
-**Solution:**
-```bash
-# Check .env file has correct URLs
-# SUPABASE_URL must be https://...
-# Restart backend: npm run dev
-```
+**Backend won't start:**
+- Check port 3000: `lsof -i :3000`
+- Verify `.env` file exists
+- Run `npm install`
 
-### "Port 3000 already in use"  
-**Solution:**
-```bash
-# Kill the process using port 3000
-lsof -i :3000
-kill -9 <PID>
+**Frontend infinite loading:**
+- Ensure backend is running
+- Check `.env.local` has `VITE_API_URL`
+- Clear browser localStorage
 
-# OR use a different port in .env
-PORT=3001
-```
+**Database errors:**
+- Verify Supabase credentials
+- Run `backend/schema.txt` in SQL Editor
+- Disable RLS for development
 
-### "Frontend can't reach backend"
-**Solution:**
-```bash
-# Make sure REACT_APP_API_URL is correct in frontend/.env.local
-# Check backend is running: http://localhost:3000/health
-# Check CORS is enabled (it is by default in backend)
-```
+## 👥 Author
 
-### "Login fails after registration"
-**Solution:**
-```bash
-# Check Supabase has `student` table created
-# Verify JWT_SECRET is set in backend .env
-# Clear browser localStorage and try again
-```
-
-### "Preferences not saving"
-**Solution:**
-```bash
-# Make sure you set up profile first
-# Then set basic preferences
-# Then set lifestyle preferences
-# Each must be saved separately
-```
-
----
-
-## 📁 Project Structure
-
-```
-Roommate Matching Website/
-├── backend/
-│   ├── src/
-│   │   ├── index.ts              ← Main server file
-│   │   ├── middleware/auth.ts    ← JWT middleware
-│   │   ├── routes/               ← All API endpoints
-│   │   │   ├── auth.ts
-│   │   │   ├── profile.ts
-│   │   │   ├── matches.ts
-│   │   │   ├── chat.ts
-│   │   │   └── notifications.ts
-│   │   ├── services/
-│   │   │   ├── auth.ts           ← Password hashing
-│   │   │   ├── database.ts       ← DB query helpers
-│   │   │   ├── matching.ts       ← Compatibility scoring
-│   │   │   └── supabase.ts       ← Supabase client
-│   │   └── types/index.ts        ← TypeScript interfaces
-│   ├── .env.example              ← Copy to .env
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx               ← Main app (updated)
-│   │   ├── components/
-│   │   │   ├── ProfileView.tsx       (updated)
-│   │   │   ├── PreferencesView.tsx   (needs update)
-│   │   │   ├── SearchView.tsx        (needs update)
-│   │   │   ├── MatchesView.tsx       (needs update)
-│   │   │   ├── RequestsView.tsx      (needs update)
-│   │   │   ├── ChatView.tsx          (needs update)
-│   │   │   ├── NotificationsView.tsx (needs update)
-│   │   │   └── ...
-│   │   ├── services/api.ts       ← API client (created)
-│   │   └── styles/
-│   ├── .env.local                ← Create this
-│   ├── package.json
-│   └── vite.config.ts
-│
-├── SETUP_GUIDE.md               ← Configuration guide
-├── FRONTEND_COMPONENTS.ts       ← Component code to copy
-└── schema.txt                   ← SQL schema
-```
-
----
-
-## 🚀 Next Steps
-
-### For Development:
-1. ✅ Database ready (Supabase)
-2. ✅ Backend API ready (running on 3000)
-3. ✅ Frontend setup (running on 5173)
-4. ⏳ Update remaining components (copy code)
-5. 🧪 Test all features
-6. 🎨 Add UI improvements
-7. 📱 Test on mobile
-
-### For Production:
-1. Add environment variables to CI/CD
-2. Build frontend: `npm run build`
-3. Deploy frontend to Vercel/Netlify
-4. Deploy backend to Heroku/Railway/AWS
-5. Update REACT_APP_API_URL to production backend
-6. Set strong JWT_SECRET
-7. Enable HTTPS
-8. Add SSL certificate
-
----
-
-## 💡 Key Features Implemented
-
-✅ User authentication (register/login)
-✅ Complete profile management
-✅ Detailed preference system (basic + lifestyle)
-✅ Intelligent matching algorithm (87-point compatibility score)
-✅ Real-time messaging between matches
-✅ Match request system (send/accept/reject)
-✅ Notification system
-✅ JWT authentication
-✅ Password hashing with bcrypt
-✅ Type-safe with TypeScript
-✅ CORS enabled
-✅ Error handling
-✅ Toast notifications
-✅ Loading states
-
----
-
-## 📞 Support
-
-If you encounter issues:
-1. Check browser console for errors
-2. Check backend terminal for logs
-3. Verify Supabase connection
-4. Verify environment variables
-5. Check network tab in DevTools
-6. Restart both frontend and backend
-
----
-
-## 📝 Notes
-
-- All passwords are hashed with bcrypt (salt rounds: 10)
-- JWT tokens expire after 7 days
-- Compatibility scores calculated on multiple factors:
-  - Age range match (20%)
-  - Budget compatibility (20%)
-  - Gender preference (15%)
-  - Sleep schedule (10%)
-  - Cleanliness match (10%)
-  - Smoking/Pets compatibility (10%)
-  - Guest policy (5%)
-- Messages are stored and searchable
-- Notifications are real-time within the session
-
----
-
-**Last Updated**: November 28, 2025  
-**Status**: 95% Complete - Ready for Supabase Setup  
-**Next Action**: Create Supabase project and configure .env files
+Bissam Iftikhar - [GitHub](https://github.com/bissamiftikhar)

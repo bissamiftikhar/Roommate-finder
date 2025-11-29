@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, ChatMessage } from '../App';
+import { User } from '../App';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,9 +8,9 @@ import {
   MessageSquare, 
   User as UserIcon, 
   Send, 
-  Trash2,
+  MoreVertical,
   AlertTriangle,
-  MoreVertical 
+  Ban
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,137 +19,132 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { toast } from 'sonner@2.0.3';
+import { matchesApi, chatApi, blockApi } from '../services/api';
 
 interface ChatViewProps {
   currentUser: User;
 }
 
-// Mock matched roommates (users you can chat with)
-const mockMatches: User[] = [
-  {
-    id: '2',
-    email: 'sarah.johnson@university.edu',
-    name: 'Sarah Johnson',
-    role: 'student',
-    profile: {
-      age: 21,
-      gender: 'Female',
-      bio: 'Computer Science major',
-      university: 'State University',
-      major: 'Computer Science',
-      year: 'Junior',
-    },
-  },
-  {
-    id: '6',
-    email: 'lisa.park@university.edu',
-    name: 'Lisa Park',
-    role: 'student',
-    profile: {
-      age: 22,
-      gender: 'Female',
-      bio: 'Psychology major',
-      university: 'State University',
-      major: 'Psychology',
-      year: 'Junior',
-    },
-  },
-];
+interface Match {
+  match_id: string;
+  student1_id: string;
+  student2_id: string;
+  match_score: number;
+  status: string;
+  other_user_name: string;
+  other_user_bio: string;
+  other_user_profile_picture?: string;
+}
 
-// Mock messages
-const mockMessages: { [key: string]: ChatMessage[] } = {
-  '2': [
-    {
-      id: '1',
-      senderId: '2',
-      receiverId: 'current',
-      message: 'Hi! Thanks for accepting my match request!',
-      timestamp: '2024-01-20T10:00:00Z',
-    },
-    {
-      id: '2',
-      senderId: 'current',
-      receiverId: '2',
-      message: 'No problem! I think we have a lot in common.',
-      timestamp: '2024-01-20T10:05:00Z',
-    },
-    {
-      id: '3',
-      senderId: '2',
-      receiverId: 'current',
-      message: 'Definitely! When would be a good time to meet and discuss apartment options?',
-      timestamp: '2024-01-20T10:10:00Z',
-    },
-  ],
-  '6': [
-    {
-      id: '4',
-      senderId: 'current',
-      receiverId: '6',
-      message: 'Hey Lisa! Looking forward to potentially rooming together.',
-      timestamp: '2024-01-19T16:00:00Z',
-    },
-  ],
-};
+interface Message {
+  message_id: string;
+  match_id: string;
+  sender_id: string;
+  content: string;
+  sent_at: string;
+  is_read: boolean;
+}
 
 export function ChatView({ currentUser }: ChatViewProps) {
-  const [selectedMatch, setSelectedMatch] = useState<User | null>(mockMatches[0]);
-  const [messages, setMessages] = useState<{ [key: string]: ChatMessage[] }>(mockMessages);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  useEffect(() => {
+    loadMatches();
+  }, []);
+
+  useEffect(() => {
+    if (selectedMatch) {
+      loadMessages(selectedMatch.match_id);
+    }
+  }, [selectedMatch]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, selectedMatch]);
+  }, [messages]);
 
-  const handleSendMessage = () => {
+  const loadMatches = async () => {
+    try {
+      setLoading(true);
+      const response = await matchesApi.getMatches();
+      setMatches(response.data.matches || []);
+      if (response.data.matches && response.data.matches.length > 0) {
+        setSelectedMatch(response.data.matches[0]);
+      }
+    } catch (error: any) {
+      console.error('Failed to load matches:', error);
+      toast.error('Failed to load matches');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async (matchId: string) => {
+    try {
+      const response = await chatApi.getMessages(matchId);
+      setMessages(response.data.messages || []);
+    } catch (error: any) {
+      console.error('Failed to load messages:', error);
+      toast.error('Failed to load messages');
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedMatch) return;
 
-    // Mock API call - replace with your backend
-    // fetch(`/api/messages`, { method: 'POST', body: JSON.stringify({ to: selectedMatch.id, message: newMessage }) })
-
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      senderId: 'current',
-      receiverId: selectedMatch.id,
-      message: newMessage,
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages({
-      ...messages,
-      [selectedMatch.id]: [...(messages[selectedMatch.id] || []), message],
-    });
-    setNewMessage('');
+    try {
+      const response = await chatApi.sendMessage(selectedMatch.match_id, newMessage);
+      setMessages([...messages, response.data.message]);
+      setNewMessage('');
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
+    }
   };
 
-  const handleDeleteHistory = (userId: string) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/messages/${userId}`, { method: 'DELETE' })
+  const handleBlockUser = async () => {
+    if (!selectedMatch) return;
 
-    setMessages({
-      ...messages,
-      [userId]: [],
-    });
-    toast.success('Chat history deleted');
+    const otherUserId = selectedMatch.student1_id === currentUser.student_id
+      ? selectedMatch.student2_id
+      : selectedMatch.student1_id;
+
+    try {
+      await blockApi.blockUser(otherUserId);
+      toast.success('User blocked successfully');
+      await loadMatches();
+      setSelectedMatch(null);
+    } catch (error: any) {
+      console.error('Failed to block user:', error);
+      toast.error('Failed to block user');
+    }
   };
 
-  const handleReportUser = (user: User) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/reports`, { method: 'POST', body: JSON.stringify({ userId: user.id }) })
+  const handleReportUser = async () => {
+    if (!selectedMatch) return;
 
-    toast.success(`${user.name} has been reported`);
+    const otherUserId = selectedMatch.student1_id === currentUser.student_id
+      ? selectedMatch.student2_id
+      : selectedMatch.student1_id;
+
+    const reason = prompt('Please provide a reason for reporting:');
+    if (!reason) return;
+
+    try {
+      await blockApi.reportUser(otherUserId, reason);
+      toast.success('User reported successfully');
+    } catch (error: any) {
+      console.error('Failed to report user:', error);
+      toast.error('Failed to report user');
+    }
   };
 
-  const handleBlockUser = (user: User) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/blocks`, { method: 'POST', body: JSON.stringify({ userId: user.id }) })
-
-    toast.success(`${user.name} has been blocked`);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -157,168 +152,163 @@ export function ChatView({ currentUser }: ChatViewProps) {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
-  const currentMessages = selectedMatch ? messages[selectedMatch.id] || [] : [];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading matches...</div>
+      </div>
+    );
+  }
 
-  return (
-    <div className="h-screen flex">
-      {/* Conversations List */}
-      <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h2>Messages</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {mockMatches.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-sm">No matched roommates yet</p>
-            </div>
-          ) : (
-            mockMatches.map((match) => (
-              <button
-                key={match.id}
-                onClick={() => setSelectedMatch(match)}
-                className={`w-full p-4 flex gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                  selectedMatch?.id === match.id ? 'bg-indigo-50' : ''
-                }`}
-              >
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {match.profile?.photoUrl ? (
-                    <ImageWithFallback
-                      src={match.profile.photoUrl}
-                      alt={match.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <UserIcon className="w-6 h-6 text-gray-400" />
-                  )}
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="truncate">{match.name}</p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {messages[match.id]?.[messages[match.id].length - 1]?.message || 'No messages yet'}
-                  </p>
-                </div>
-              </button>
-            ))
-          )}
+  if (matches.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-4">
+        <MessageSquare className="w-16 h-16 text-gray-300" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">No Active Matches</h3>
+          <p className="text-gray-500 mt-1">Connect with potential roommates to start chatting</p>
         </div>
       </div>
+    );
+  }
 
-      {/* Chat Area */}
-      {selectedMatch ? (
-        <div className="flex-1 flex flex-col bg-gray-50">
-          {/* Chat Header */}
-          <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                {selectedMatch.profile?.photoUrl ? (
+  return (
+    <div className="grid grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
+      {/* Matches List */}
+      <Card className="col-span-1">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            My Matches
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="space-y-1">
+            {matches.map((match) => (
+              <button
+                key={match.match_id}
+                onClick={() => setSelectedMatch(match)}
+                className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border-l-4 ${
+                  selectedMatch?.match_id === match.match_id
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3">
                   <ImageWithFallback
-                    src={selectedMatch.profile.photoUrl}
-                    alt={selectedMatch.name}
-                    className="w-full h-full object-cover"
+                    src={match.other_user_profile_picture}
+                    alt={match.other_user_name}
+                    fallbackIcon={<UserIcon className="w-4 h-4" />}
+                    className="w-10 h-10 rounded-full"
                   />
-                ) : (
-                  <UserIcon className="w-5 h-5 text-gray-400" />
-                )}
-              </div>
-              <div>
-                <h3>{selectedMatch.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedMatch.profile?.major}
-                </p>
-              </div>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDeleteHistory(selectedMatch.id)}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Chat History
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleReportUser(selectedMatch)}>
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Report User
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBlockUser(selectedMatch)}>
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Block User
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {currentMessages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2" />
-                  <p>No messages yet. Start a conversation!</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">
+                      {match.other_user_name}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {match.other_user_bio}
+                    </p>
+                  </div>
                 </div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Chat Window */}
+      <Card className="col-span-3 flex flex-col">
+        {selectedMatch ? (
+          <>
+            {/* Chat Header */}
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ImageWithFallback
+                    src={selectedMatch.other_user_profile_picture}
+                    alt={selectedMatch.other_user_name}
+                    fallbackIcon={<UserIcon className="w-5 h-5" />}
+                    className="w-12 h-12 rounded-full"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-lg">{selectedMatch.other_user_name}</h3>
+                    <p className="text-sm text-gray-500">Match Score: {selectedMatch.match_score}%</p>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleReportUser} className="text-yellow-600">
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      Report User
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleBlockUser} className="text-red-600">
+                      <Ban className="w-4 h-4 mr-2" />
+                      Block User
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            ) : (
-              currentMessages.map((msg) => {
-                const isCurrentUser = msg.senderId === 'current';
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                  >
+            </CardHeader>
+
+            {/* Messages */}
+            <CardContent className="flex-1 overflow-y-auto p-6 space-y-4">
+              {messages.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  No messages yet. Start the conversation!
+                </div>
+              ) : (
+                messages.map((message) => {
+                  const isCurrentUser = message.sender_id === currentUser.student_id;
+                  return (
                     <div
-                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                        isCurrentUser
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-white border border-gray-200'
-                      }`}
+                      key={message.message_id}
+                      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                     >
-                      <p className="text-sm">{msg.message}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          isCurrentUser ? 'text-indigo-100' : 'text-muted-foreground'
+                      <div
+                        className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                          isCurrentUser
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-900'
                         }`}
                       >
-                        {formatTimestamp(msg.timestamp)}
-                      </p>
+                        <p>{message.content}</p>
+                        <p className={`text-xs mt-1 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {formatTimestamp(message.sent_at)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </CardContent>
 
-          {/* Message Input */}
-          <div className="bg-white border-t border-gray-200 p-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <Button onClick={handleSendMessage}>
-                <Send className="w-4 h-4" />
-              </Button>
+            {/* Message Input */}
+            <div className="border-t p-4">
+              <div className="flex gap-2">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                />
+                <Button onClick={handleSendMessage}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            Select a match to start chatting
           </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="text-center text-muted-foreground">
-            <MessageSquare className="w-16 h-16 mx-auto mb-4" />
-            <p>Select a conversation to start chatting</p>
-          </div>
-        </div>
-      )}
+        )}
+      </Card>
     </div>
   );
 }

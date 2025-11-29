@@ -1,0 +1,7 @@
+
+> roommate-matcher-backend@1.0.0 dev
+> tsx watch src/index.ts
+
+⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+🚀 Server running on http://localhost:3000
+Health check: http://localhost:3000/health

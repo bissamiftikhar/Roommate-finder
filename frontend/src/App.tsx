@@ -7,11 +7,13 @@ import { toast } from 'sonner';
 import { authApi } from './services/api';
 
 export interface User {
-  student_id: string;
-  student_email: string;
-  status: string;
-  created_at: string;
-  last_login: string | null;
+  student_id?: string;
+  student_email?: string;
+  admin_id?: string;
+  admin_email?: string;
+  status?: string;
+  created_at?: string;
+  last_login?: string | null;
 }
 
 export interface Profile {

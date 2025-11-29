@@ -1,66 +1,71 @@
-import { useState } from 'react';
-import { Notification } from '../App';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Bell, Mail, Heart, Shield, Check } from 'lucide-react';
+import { notificationsApi } from '../services/api';
+import { toast } from 'sonner@2.0.3';
 
-// Mock notifications
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'match_request',
-    message: 'Sarah Johnson sent you a match request',
-    timestamp: '2024-01-20T10:00:00Z',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'match_accepted',
-    message: 'Mike Chen accepted your match request',
-    timestamp: '2024-01-19T15:30:00Z',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'new_message',
-    message: 'You have a new message from Lisa Park',
-    timestamp: '2024-01-19T14:00:00Z',
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'match_request',
-    message: 'Emma Wilson sent you a match request',
-    timestamp: '2024-01-18T11:20:00Z',
-    read: true,
-  },
-];
+interface Notification {
+  notification_id: string;
+  student_id: string;
+  type: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 export function NotificationsView() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleMarkAsRead = (id: string) => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/notifications/${id}/read`, { method: 'POST' })
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await notificationsApi.getNotifications();
+      setNotifications(response.data.notifications || []);
+    } catch (error: any) {
+      console.error('Failed to load notifications:', error);
+      toast.error('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/notifications/read-all`, { method: 'POST' })
-
-    setNotifications(
-      notifications.map((notif) => ({ ...notif, read: true }))
-    );
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationsApi.markAsRead(id);
+      setNotifications(
+        notifications.map((notif) =>
+          notif.notification_id === id ? { ...notif, is_read: true } : notif
+        )
+      );
+    } catch (error: any) {
+      console.error('Failed to mark as read:', error);
+      toast.error('Failed to mark as read');
+    }
   };
 
-  const getIcon = (type: Notification['type']) => {
+  const handleMarkAllAsRead = async () => {
+    try {
+      for (const notif of notifications.filter(n => !n.is_read)) {
+        await notificationsApi.markAsRead(notif.notification_id);
+      }
+      setNotifications(
+        notifications.map((notif) => ({ ...notif, is_read: true }))
+      );
+      toast.success('All notifications marked as read');
+    } catch (error: any) {
+      console.error('Failed to mark all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const getIcon = (type: string) => {
     switch (type) {
       case 'match_request':
         return <Mail className="w-5 h-5" />;
@@ -70,10 +75,12 @@ export function NotificationsView() {
         return <Bell className="w-5 h-5" />;
       case 'admin_action':
         return <Shield className="w-5 h-5" />;
+      default:
+        return <Bell className="w-5 h-5" />;
     }
   };
 
-  const getIconColor = (type: Notification['type']) => {
+  const getIconColor = (type: string) => {
     switch (type) {
       case 'match_request':
         return 'bg-blue-100 text-blue-600';
@@ -83,96 +90,78 @@ export function NotificationsView() {
         return 'bg-purple-100 text-purple-600';
       case 'admin_action':
         return 'bg-red-100 text-red-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-      return `${diffInMinutes} minutes ago`;
-    } else if (diffInHours < 24) {
-      return `${diffInHours} hours ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} days ago`;
-    }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading notifications...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1>Notifications</h1>
-          <p className="text-muted-foreground">
-            {unreadCount > 0
-              ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`
-              : 'All caught up!'}
+          <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
+          <p className="text-gray-600 mt-1">
+            {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}` : 'All caught up!'}
           </p>
         </div>
         {unreadCount > 0 && (
           <Button onClick={handleMarkAllAsRead} variant="outline">
             <Check className="w-4 h-4 mr-2" />
-            Mark all as read
+            Mark All as Read
           </Button>
         )}
       </div>
 
       {notifications.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Bell className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              No notifications yet
-            </p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-12">
+          <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">No Notifications</h3>
+          <p className="text-gray-500 mt-1">You're all caught up!</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {notifications.map((notification) => (
             <Card
-              key={notification.id}
-              className={`transition-colors ${
-                !notification.read ? 'bg-blue-50 border-blue-200' : ''
-              }`}
+              key={notification.notification_id}
+              className={`${!notification.is_read ? 'border-l-4 border-l-blue-600 bg-blue-50' : ''}`}
             >
-              <CardContent className="pt-6">
-                <div className="flex gap-4">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getIconColor(
-                      notification.type
-                    )}`}
-                  >
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className={`p-3 rounded-full ${getIconColor(notification.type)}`}>
                     {getIcon(notification.type)}
                   </div>
-
                   <div className="flex-1">
-                    <div className="flex items-start justify-between mb-1">
-                      <p className={!notification.read ? '' : 'text-muted-foreground'}>
-                        {notification.message}
-                      </p>
-                      {!notification.read && (
-                        <Badge variant="default" className="ml-2">
-                          New
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">
-                        {formatTimestamp(notification.timestamp)}
-                      </p>
-                      {!notification.read && (
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className={`text-sm ${!notification.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                          {notification.content}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatDate(notification.created_at)}
+                        </p>
+                      </div>
+                      {!notification.is_read && (
                         <Button
-                          onClick={() => handleMarkAsRead(notification.id)}
+                          onClick={() => handleMarkAsRead(notification.notification_id)}
                           variant="ghost"
                           size="sm"
                         >
-                          Mark as read
+                          <Check className="w-4 h-4" />
                         </Button>
                       )}
                     </div>

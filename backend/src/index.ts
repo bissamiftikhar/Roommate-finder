@@ -10,6 +10,7 @@ import profileRoutes from './routes/profile.js';
 import matchesRoutes from './routes/matches.js';
 import chatRoutes from './routes/chat.js';
 import notificationsRoutes from './routes/notifications.js';
+import adminRoutes from './routes/admin.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

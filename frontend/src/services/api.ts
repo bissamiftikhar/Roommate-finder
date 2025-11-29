@@ -61,4 +61,23 @@ export const notificationsApi = {
     api.put(`/notifications/${notificationId}/read`),
 };
 
+export const adminApi = {
+  getReports: (status?: string) => 
+    api.get('/admin/reports', { params: status ? { status } : {} }),
+  updateReport: (reportId: string, status: string, admin_notes?: string) =>
+    api.put(`/admin/reports/${reportId}`, { status, admin_notes }),
+  getUsers: () => api.get('/admin/users'),
+  updateUserStatus: (userId: string, status: string) =>
+    api.put(`/admin/users/${userId}/status`, { status }),
+  deleteUser: (userId: string) => api.delete(`/admin/users/${userId}`),
+  getStats: () => api.get('/admin/stats'),
+};
+
+export const blockApi = {
+  blockUser: (userId: string) => api.post(`/profile/block/${userId}`),
+  unblockUser: (userId: string) => api.delete(`/profile/block/${userId}`),
+  reportUser: (reportedId: string, reason: string) =>
+    api.post('/profile/report', { reported_id: reportedId, reason }),
+};
+
 export default api;
