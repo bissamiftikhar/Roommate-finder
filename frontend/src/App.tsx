@@ -11,6 +11,7 @@ export interface User {
   student_email?: string;
   admin_id?: string;
   admin_email?: string;
+  role?: string;
   status?: string;
   created_at?: string;
   last_login?: string | null;
@@ -116,6 +117,9 @@ function App() {
   const handleLogin = async (email: string, password: string) => {
     try {
       const response = await authApi.login(email, password);
+      console.log('Login response:', response.data);
+      console.log('User from login:', response.data.user);
+      console.log('User role from login:', response.data.user?.role);
       localStorage.setItem('authToken', response.data.access_token);
       setCurrentUser(response.data.user);
       setCurrentView('dashboard');

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Bell, Mail, Heart, Shield, Check } from 'lucide-react';
 import { notificationsApi } from '../services/api';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Notification {
   notification_id: string;
@@ -26,10 +26,17 @@ export function NotificationsView() {
   const loadNotifications = async () => {
     try {
       setLoading(true);
+      console.log('Fetching notifications...');
       const response = await notificationsApi.getNotifications();
-      setNotifications(response.data.notifications || []);
+      console.log('Notifications response:', response);
+      console.log('Notifications data:', response.data);
+      // Backend returns array directly, not wrapped in { notifications: [] }
+      const notifArray = Array.isArray(response.data) ? response.data : [];
+      console.log('Setting notifications:', notifArray);
+      setNotifications(notifArray);
     } catch (error: any) {
       console.error('Failed to load notifications:', error);
+      console.error('Error details:', error.response?.data);
       toast.error('Failed to load notifications');
     } finally {
       setLoading(false);

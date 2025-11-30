@@ -34,7 +34,9 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    console.log('Fetching matches for student:', req.user.student_id);
     const matches = await db.getMatchesForStudent(req.user.student_id);
+    console.log('Raw matches from DB:', matches);
 
     // Fetch details for each match
     const matchesWithDetails = await Promise.all(
@@ -42,12 +44,28 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         const otherStudentId =
           match.student1_id === req.user!.student_id ? match.student2_id : match.student1_id;
         const profile = await db.getProfileByStudentId(otherStudentId);
-        return { ...match, otherStudent: profile };
+        const student = await db.getStudentById(otherStudentId);
+        
+        const transformedMatch = {
+          match_id: match.match_id,
+          student1_id: match.student1_id,
+          student2_id: match.student2_id,
+          compatibility_score: match.compatibility_score,
+          status: match.status,
+          matched_at: match.matched_at,
+          other_user_name: student?.student_email?.split('@')[0] || 'Unknown',
+          other_user_bio: profile?.bio || '',
+          other_user_profile_picture: undefined,
+        };
+        console.log('Transformed match:', transformedMatch);
+        return transformedMatch;
       })
     );
 
-    res.json(matchesWithDetails);
+    console.log('Final matches with details:', matchesWithDetails);
+    res.json({ matches: matchesWithDetails });
   } catch (error: any) {
+    console.error('Error fetching matches:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -62,19 +80,32 @@ router.get('/requests', authenticateToken, async (req: AuthRequest, res: Respons
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    console.log('Fetching requests for student:', req.user.student_id);
     const requests = await db.getMatchRequestsForStudent(req.user.student_id);
+    console.log('Raw requests from DB:', requests);
 
-    // Fetch sender/receiver details
+    // Fetch sender/receiver details with student info
     const requestsWithDetails = await Promise.all(
       requests.map(async (request) => {
-        const sender = await db.getProfileByStudentId(request.sender_id);
-        const receiver = await db.getProfileByStudentId(request.receiver_id);
-        return { ...request, sender, receiver };
+        const senderProfile = await db.getProfileByStudentId(request.sender_id);
+        const receiverProfile = await db.getProfileByStudentId(request.receiver_id);
+        const senderStudent = await db.getStudentById(request.sender_id);
+        const receiverStudent = await db.getStudentById(request.receiver_id);
+        
+        const result = { 
+          ...request, 
+          sender: { ...senderProfile, student_email: senderStudent?.student_email },
+          receiver: { ...receiverProfile, student_email: receiverStudent?.student_email }
+        };
+        console.log('Request with details:', result);
+        return result;
       })
     );
 
+    console.log('Final requests with details:', requestsWithDetails);
     res.json(requestsWithDetails);
   } catch (error: any) {
+    console.error('Error fetching requests:', error);
     res.status(500).json({ error: error.message });
   }
 });

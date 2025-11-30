@@ -46,6 +46,7 @@ export function AdminUsersView() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Student | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -113,7 +114,7 @@ export function AdminUsersView() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto relative">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Manage Users</h1>
         <p className="text-muted-foreground">
@@ -148,7 +149,7 @@ export function AdminUsersView() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="overflow-visible">
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>All Users</CardTitle>
@@ -165,11 +166,12 @@ export function AdminUsersView() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-visible">
           {filteredUsers.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No users found</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto overflow-y-visible">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
@@ -215,49 +217,75 @@ export function AdminUsersView() {
                         : 'Never'}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {user.status === 'active' ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleUpdateStatus(user.student_id, 'suspended')
-                              }
+                      <div className="relative">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === user.student_id ? null : user.student_id);
+                          }}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                        
+                        {openMenuId === user.student_id && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setOpenMenuId(null)}
+                            />
+                            <div 
+                              className="absolute right-0 top-full mt-1 w-48 bg-white shadow-lg border border-gray-200 rounded-lg py-1 z-50"
                             >
-                              <UserX className="h-4 w-4 mr-2" />
-                              Suspend User
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleUpdateStatus(user.student_id, 'active')
-                              }
-                            >
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Activate User
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setUserToDelete(user);
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                              {user.status === 'active' ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    handleUpdateStatus(user.student_id, 'suspended');
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm"
+                                >
+                                  <UserX className="h-4 w-4" />
+                                  <span>Suspend User</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    handleUpdateStatus(user.student_id, 'active');
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm"
+                                >
+                                  <UserCheck className="h-4 w-4" />
+                                  <span>Activate User</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                  setUserToDelete(user);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 text-sm"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete User</span>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -274,7 +302,10 @@ export function AdminUsersView() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600">
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

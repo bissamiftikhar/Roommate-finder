@@ -28,6 +28,10 @@ export type DashboardView =
   | 'admin-reports';
 
 export function Dashboard({ user, onLogout }: DashboardProps) {
+  console.log('Dashboard user:', user);
+  console.log('User role:', user.role);
+  console.log('Is admin?', user.role === 'admin');
+  
   const [currentView, setCurrentView] = useState<DashboardView>(
     user.role === 'admin' ? 'admin-users' : 'profile'
   );

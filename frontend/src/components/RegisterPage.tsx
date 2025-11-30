@@ -28,21 +28,21 @@ export function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps)
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center mb-2">
-            <Users className="w-6 h-6 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-4">
+      <Card className="w-full max-w-md border-0 shadow-2xl rounded-2xl">
+        <CardHeader className="space-y-1 flex flex-col items-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white rounded-t-2xl py-8">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg">
+            <Users className="w-8 h-8 text-indigo-600" />
           </div>
-          <CardTitle className="text-center">Create Account</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-center text-2xl text-white">Create Account</CardTitle>
+          <CardDescription className="text-center text-indigo-100">
             Join RoommateMatch today
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-8 pb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name" className="font-semibold text-gray-700">Full Name</Label>
               <Input
                 id="name"
                 type="text"
@@ -50,10 +50,11 @@ export function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps)
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                className="border-2 border-indigo-200 focus:border-indigo-500 focus:ring-indigo-300 rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="font-semibold text-gray-700">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -61,12 +62,13 @@ export function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps)
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-2 border-indigo-200 focus:border-indigo-500 focus:ring-indigo-300 rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role" className="font-semibold text-gray-700">Role</Label>
               <Select value={role} onValueChange={(val) => setRole(val as 'student' | 'admin')}>
-                <SelectTrigger>
+                <SelectTrigger className="border-2 border-indigo-200 focus:border-indigo-500 rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -76,7 +78,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps)
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="font-semibold text-gray-700">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -84,10 +86,11 @@ export function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps)
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="border-2 border-indigo-200 focus:border-indigo-500 focus:ring-indigo-300 rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="font-semibold text-gray-700">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -95,18 +98,26 @@ export function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps)
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                className="border-2 border-indigo-200 focus:border-indigo-500 focus:ring-indigo-300 rounded-lg"
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button 
+              type="submit"
+              style={{
+                backgroundImage: 'linear-gradient(to right, rgb(79, 70, 229), rgb(147, 51, 234), rgb(236, 72, 153))',
+                color: 'white'
+              }}
+              className="w-full font-semibold py-3 text-lg rounded-lg shadow-lg transition-all duration-200 mt-6"
+            >
               Create Account
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
               Already have an account?{' '}
               <button
                 onClick={onSwitchToLogin}
-                className="text-indigo-600 hover:underline"
+                className="text-indigo-600 hover:text-indigo-700 font-semibold underline hover:no-underline transition"
               >
                 Sign In
               </button>

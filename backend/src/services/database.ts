@@ -316,10 +316,11 @@ export async function sendMessage(
         content,
       },
     ])
-    .select()
+    .select('*')
     .single();
 
   if (error) throw new Error(`Failed to send message: ${error.message}`);
+  console.log('Message saved to DB:', data);
   return data;
 }
 
@@ -380,6 +381,68 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
     .from('notification')
     .update({ is_read: true })
     .eq('notification_id', notificationId);
+}
+
+// ============ ADMIN NOTIFICATION OPERATIONS ============
+
+export async function notifyAllAdmins(
+  type: 'system' | 'report_update',
+  content: string
+): Promise<void> {
+  try {
+    console.log('notifyAllAdmins called with:', { type, content });
+    
+    // Get all admin IDs
+    const { data: admins, error } = await supabase
+      .from('admin')
+      .select('admin_id');
+
+    console.log('Admins found:', admins, 'Error:', error);
+
+    if (error) {
+      console.error('Error fetching admins:', error);
+      return;
+    }
+    
+    if (!admins || admins.length === 0) {
+      console.log('No admins found to notify');
+      return;
+    }
+
+    // Create notification for each admin using their admin_id as student_id
+    // (notification table uses student_id field but we'll use it for admin_id)
+    const notifications = admins.map(admin => ({
+      student_id: admin.admin_id,
+      type,
+      content,
+    }));
+
+    console.log('Creating notifications:', notifications);
+
+    const { data: result, error: insertError } = await supabase
+      .from('notification')
+      .insert(notifications)
+      .select();
+
+    console.log('Notification insert result:', result, 'Error:', insertError);
+    
+    if (insertError) {
+      console.error('Error inserting notifications:', insertError);
+    }
+  } catch (err) {
+    console.error('Exception in notifyAllAdmins:', err);
+  }
+}
+
+export async function getNotificationsForAdmin(adminId: string): Promise<Notification[]> {
+  const { data, error } = await supabase
+    .from('notification')
+    .select('*')
+    .eq('student_id', adminId)
+    .order('created_at', { ascending: false });
+
+  if (error) return [];
+  return data || [];
 }
 
 // ============ REPORT OPERATIONS ============

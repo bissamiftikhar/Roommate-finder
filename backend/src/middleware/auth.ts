@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request {
   user?: {
-    student_id: string;
+    student_id?: string;
+    admin_id?: string;
     student_email: string;
   };
 }
@@ -18,8 +19,10 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 
   jwt.verify(token, process.env.JWT_SECRET || 'secret', (err: any, user: any) => {
     if (err) {
+      console.error('Token verification failed:', err.message);
       return res.status(403).json({ error: 'Invalid token' });
     }
+    console.log('✅ Token verified. User object:', user);
     req.user = user;
     next();
   });
@@ -28,6 +31,14 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 export function generateToken(studentId: string, email: string): string {
   return jwt.sign(
     { student_id: studentId, student_email: email },
+    process.env.JWT_SECRET || 'secret',
+    { expiresIn: '7d' }
+  );
+}
+
+export function generateAdminToken(adminId: string, email: string): string {
+  return jwt.sign(
+    { admin_id: adminId, student_email: email },
     process.env.JWT_SECRET || 'secret',
     { expiresIn: '7d' }
   );

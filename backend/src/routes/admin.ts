@@ -41,14 +41,24 @@ router.get('/reports', authenticateToken, requireAdmin, async (req: AuthRequest,
     const status = req.query.status as string | undefined;
     const reports = await db.getReports(status);
 
-    // Fetch reporter and reported user details
+    // Fetch reporter and reported user details including student info
     const reportsWithDetails = await Promise.all(
       reports.map(async (report) => {
-        const reporter = report.reporter_id 
+        const reporterProfile = report.reporter_id 
           ? await db.getProfileByStudentId(report.reporter_id)
           : null;
-        const reported = await db.getProfileByStudentId(report.reported_id);
-        return { ...report, reporter, reported };
+        const reporterStudent = report.reporter_id
+          ? await db.getStudentById(report.reporter_id)
+          : null;
+        
+        const reportedProfile = await db.getProfileByStudentId(report.reported_id);
+        const reportedStudent = await db.getStudentById(report.reported_id);
+        
+        return { 
+          ...report, 
+          reporter: reporterProfile ? { ...reporterProfile, student: reporterStudent } : null,
+          reported: reportedProfile ? { ...reportedProfile, student: reportedStudent } : null
+        };
       })
     );
 
@@ -73,13 +83,27 @@ router.put('/reports/:reportId', authenticateToken, requireAdmin, async (req: Au
 
     const updated = await db.updateReportStatus(reportId, status, admin_notes);
 
-    // If resolved, notify the reporter
-    if (status === 'resolved' && updated.reporter_id) {
-      await db.createNotification(
-        updated.reporter_id,
-        'report_update',
-        'Your report has been resolved by an administrator'
-      );
+    // Notify the reporter based on status
+    if (updated.reporter_id) {
+      if (status === 'resolved') {
+        await db.createNotification(
+          updated.reporter_id,
+          'report_update',
+          'Your report has been resolved by an administrator. Thank you for helping keep our community safe.'
+        );
+      } else if (status === 'dismissed') {
+        await db.createNotification(
+          updated.reporter_id,
+          'report_update',
+          'Your report has been reviewed. After investigation, no action was required at this time.'
+        );
+      } else if (status === 'under_review') {
+        await db.createNotification(
+          updated.reporter_id,
+          'report_update',
+          'Your report is currently under review by our admin team.'
+        );
+      }
     }
 
     res.json(updated);
@@ -178,6 +202,21 @@ router.get('/stats', authenticateToken, requireAdmin, async (req: AuthRequest, r
       totalMessages: messagesResult.count || 0,
     });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /admin/test-notification
+ * Create a test notification for all admins (for testing purposes)
+ */
+router.post('/test-notification', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    console.log('Test notification called by user:', req.user);
+    await db.notifyAllAdmins('system', 'TEST: This is a test notification from the system');
+    res.json({ success: true, message: 'Test notification created' });
+  } catch (error: any) {
+    console.error('Test notification error:', error);
     res.status(500).json({ error: error.message });
   }
 });

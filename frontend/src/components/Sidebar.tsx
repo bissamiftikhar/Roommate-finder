@@ -23,7 +23,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user, currentView, onViewChange, onLogout }: SidebarProps) {
+  console.log('Sidebar user:', user);
+  console.log('Sidebar user.role:', user.role);
   const isAdmin = user.role === 'admin';
+  console.log('Sidebar isAdmin:', isAdmin);
 
   const studentMenuItems = [
     { id: 'profile' as DashboardView, label: 'My Profile', icon: UserIcon },
@@ -47,11 +50,18 @@ export function Sidebar({ user, currentView, onViewChange, onLogout }: SidebarPr
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg">
             <Users className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
-            <h1>RoommateMatch</h1>
+            <h1 style={{
+              fontSize: '1.125rem',
+              fontWeight: 'bold',
+              background: 'linear-gradient(to right, rgb(37, 99, 235), rgb(147, 51, 234), rgb(236, 72, 153))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>LiviSync</h1>
             <p className="text-xs text-muted-foreground">{user.role === 'admin' ? 'Admin' : 'Student'}</p>
           </div>
         </div>

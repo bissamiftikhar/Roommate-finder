@@ -111,6 +111,8 @@ export interface AuthResponse {
 
 export interface MatchWithDetails extends Match {
   profile: Profile;
-  basicPreference: BasicPreference;
-  lifestylePreference: LifestylePreference;
+  basicPreference?: BasicPreference;
+  lifestylePreference?: LifestylePreference;
+  student?: Student;
 }
+

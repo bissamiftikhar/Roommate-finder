@@ -168,18 +168,21 @@ export function AdminReportsView() {
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {report.reported?.bio || 'No name'}
+                          {report.reported?.student?.student_email?.split('@')[0] || 'Unknown'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Age: {report.reported?.age || 'N/A'}
+                          {report.reported?.student?.student_email || 'No email'}
                         </p>
                       </div>
                     </TableCell>
                     <TableCell>
                       {report.reporter ? (
                         <div>
-                          <p className="text-sm">
-                            {report.reporter.bio || 'Anonymous'}
+                          <p className="font-medium">
+                            {report.reporter.student?.student_email?.split('@')[0] || 'Anonymous'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {report.reporter.student?.student_email || ''}
                           </p>
                         </div>
                       ) : (
@@ -209,7 +212,7 @@ export function AdminReportsView() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Report Details</DialogTitle>
             <DialogDescription>
@@ -218,23 +221,29 @@ export function AdminReportsView() {
           </DialogHeader>
 
           {selectedReport && (
-            <div className="space-y-4">
+            <div className="space-y-3 pb-4">
               <div>
-                <h4 className="font-semibold mb-2">Reported User</h4>
-                <div className="p-3 bg-muted rounded">
-                  <p><strong>Bio:</strong> {selectedReport.reported?.bio || 'N/A'}</p>
-                  <p><strong>Age:</strong> {selectedReport.reported?.age || 'N/A'}</p>
-                  <p><strong>Gender:</strong> {selectedReport.reported?.gender || 'N/A'}</p>
+                <h4 className="font-semibold mb-1 text-sm">Reported User</h4>
+                <div className="p-2 bg-muted rounded text-sm">
+                  <p><strong>Name:</strong> {selectedReport.reported?.student?.student_email?.split('@')[0] || 'Unknown'}</p>
+                  <p><strong>Email:</strong> {selectedReport.reported?.student?.student_email || 'N/A'}</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">Report Reason</h4>
-                <p className="p-3 bg-muted rounded">{selectedReport.reason}</p>
+                <h4 className="font-semibold mb-1 text-sm">Reporter</h4>
+                <div className="p-2 bg-muted rounded text-sm">
+                  <p><strong>Name:</strong> {selectedReport.reporter?.student?.student_email?.split('@')[0] || 'Anonymous'}</p>
+                </div>
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">Status</h4>
+                <h4 className="font-semibold mb-1 text-sm">Report Reason</h4>
+                <p className="p-2 bg-muted rounded text-sm">{selectedReport.reason}</p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold mb-1 text-sm">Change Status</h4>
                 <Select value={newStatus} onValueChange={setNewStatus}>
                   <SelectTrigger>
                     <SelectValue />
@@ -249,12 +258,12 @@ export function AdminReportsView() {
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">Admin Notes</h4>
+                <h4 className="font-semibold mb-1 text-sm">Admin Notes</h4>
                 <Textarea
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder="Add notes about your investigation or action taken..."
-                  rows={4}
+                  placeholder="Add notes..."
+                  rows={2}
                 />
               </div>
             </div>
@@ -264,7 +273,11 @@ export function AdminReportsView() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateReport}>
+            <Button 
+              onClick={handleUpdateReport}
+              style={{ backgroundColor: 'rgb(37, 99, 235)', color: 'white' }}
+              className="hover:bg-blue-700"
+            >
               Update Report
             </Button>
           </DialogFooter>

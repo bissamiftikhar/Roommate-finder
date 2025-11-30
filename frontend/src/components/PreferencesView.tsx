@@ -6,8 +6,9 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Switch } from './ui/switch';
 import { Slider } from './ui/slider';
-import { Save } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { Save, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { profileApi } from '../services/api';
 
 interface PreferencesViewProps {
   user: User;
@@ -24,39 +25,151 @@ export function PreferencesView({ user }: PreferencesViewProps) {
     guests: 'Sometimes',
     budget: [500, 1500],
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Mock API call to fetch existing preferences
-    // fetch(`/api/users/${user.id}/preferences`)
-    //   .then(res => res.json())
-    //   .then(data => setPreferences(data));
-  }, [user.id]);
+    loadPreferences();
+  }, []);
 
-  const handleSave = () => {
-    // Mock API call - replace with your backend
-    // fetch(`/api/users/${user.id}/preferences`, { method: 'PUT', body: JSON.stringify(preferences) })
-    
-    toast.success('Preferences saved successfully!');
+  const loadPreferences = async () => {
+    try {
+      setLoading(true);
+      const [basicRes, lifestyleRes] = await Promise.all([
+        profileApi.getBasicPreferences(),
+        profileApi.getLifestylePreferences(),
+      ]);
+
+      const basicData = basicRes.data;
+      const lifestyleData = lifestyleRes.data;
+
+      // Map backend sleep_schedule to frontend format
+      const sleepScheduleMap: { [key: string]: string } = {
+        'early_bird': 'Early Bird',
+        'normal': 'Normal',
+        'night_owl': 'Night Owl',
+        'flexible': 'Flexible',
+      };
+
+      const guestPolicyMap: { [key: string]: string } = {
+        'never': 'Never',
+        'rarely': 'Rarely',
+        'sometimes': 'Sometimes',
+        'often': 'Often',
+      };
+
+      const cleanlinessMap: { [key: string]: string } = {
+        'very_clean': 'Very Clean',
+        'moderate': 'Moderate',
+        'relaxed': 'Relaxed',
+      };
+
+      setPreferences({
+        gender: basicData?.gender_preference === 'any' ? 'Any' : (basicData?.gender_preference?.charAt(0).toUpperCase() + basicData?.gender_preference?.slice(1)) || 'Any',
+        ageRange: [basicData?.age_min || 18, basicData?.age_max || 30],
+        sleepSchedule: sleepScheduleMap[lifestyleData?.sleep_schedule] || 'Flexible',
+        cleanliness: cleanlinessMap[lifestyleData?.cleanliness] || 'Moderate',
+        smoking: lifestyleData?.smoking || false,
+        pets: lifestyleData?.pets || false,
+        guests: guestPolicyMap[lifestyleData?.guest_policy] || 'Sometimes',
+        budget: [basicData?.budget_min || 500, basicData?.budget_max || 1500],
+      });
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+      toast.error('Failed to load preferences');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1>Roommate Preferences</h1>
-        <p className="text-muted-foreground">
-          Set your preferences to find the perfect match
-        </p>
-      </div>
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      // Map frontend format to backend format
+      const sleepScheduleReverseMap: { [key: string]: string } = {
+        'Early Bird': 'early_bird',
+        'Normal': 'normal',
+        'Night Owl': 'night_owl',
+        'Flexible': 'flexible',
+      };
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Preferences</CardTitle>
-            <CardDescription>
-              General preferences for your ideal roommate
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+      const guestPolicyReverseMap: { [key: string]: string } = {
+        'Never': 'never',
+        'Rarely': 'rarely',
+        'Sometimes': 'sometimes',
+        'Often': 'often',
+      };
+
+      const cleanlinessReverseMap: { [key: string]: string } = {
+        'Very Clean': 'very_clean',
+        'Moderate': 'moderate',
+        'Relaxed': 'relaxed',
+      };
+
+      const basicPreferences = {
+        gender_preference: preferences.gender.toLowerCase() === 'any' ? 'any' : preferences.gender.toLowerCase(),
+        age_min: preferences.ageRange[0],
+        age_max: preferences.ageRange[1],
+        budget_min: preferences.budget[0],
+        budget_max: preferences.budget[1],
+      };
+
+      const lifestylePreferences = {
+        sleep_schedule: sleepScheduleReverseMap[preferences.sleepSchedule] || 'flexible',
+        cleanliness: cleanlinessReverseMap[preferences.cleanliness] || 'moderate',
+        guest_policy: guestPolicyReverseMap[preferences.guests] || 'sometimes',
+        smoking: preferences.smoking,
+        pets: preferences.pets,
+        noise_tolerance: 'moderate',
+        study_habits: 'flexible',
+      };
+
+      await Promise.all([
+        profileApi.updateBasicPreferences(basicPreferences),
+        profileApi.updateLifestylePreferences(lifestylePreferences),
+      ]);
+
+      toast.success('Preferences saved successfully!');
+    } catch (error: any) {
+      console.error('Failed to save preferences:', error);
+      toast.error(error?.response?.data?.error || 'Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen p-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Roommate Preferences
+          </h1>
+          <p className="text-lg font-semibold text-gray-700 mt-2">
+            Set your preferences to find the perfect match
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-white rounded-t-lg border-b border-blue-200">
+              <CardTitle className="text-xl font-bold text-gray-800">Basic Preferences</CardTitle>
+              <CardDescription className="text-base font-semibold text-gray-600">
+                General preferences for your ideal roommate
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
               <Label>Preferred Gender</Label>
               <Select
@@ -111,14 +224,14 @@ export function PreferencesView({ user }: PreferencesViewProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Lifestyle Preferences</CardTitle>
-            <CardDescription>
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="bg-white rounded-t-lg border-b border-purple-200">
+            <CardTitle className="text-xl font-bold text-gray-800">Lifestyle Preferences</CardTitle>
+            <CardDescription className="text-base font-semibold text-gray-600">
               Daily habits and lifestyle choices
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
               <Label>Sleep Schedule</Label>
               <Select
@@ -210,10 +323,28 @@ export function PreferencesView({ user }: PreferencesViewProps) {
           </CardContent>
         </Card>
 
-        <Button onClick={handleSave} className="w-full">
-          <Save className="w-4 h-4 mr-2" />
-          Save Preferences
+        <Button 
+          onClick={handleSave} 
+          disabled={saving}
+          style={{
+            backgroundImage: 'linear-gradient(to right, rgb(37, 99, 235), rgb(147, 51, 234), rgb(236, 72, 153))',
+            color: 'white'
+          }}
+          className="w-full font-semibold py-6 text-lg shadow-lg transition-all duration-300 rounded-lg"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5 mr-2" />
+              Save Preferences
+            </>
+          )}
         </Button>
+        </div>
       </div>
     </div>
   );

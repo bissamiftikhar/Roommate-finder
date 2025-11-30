@@ -15,10 +15,13 @@ router.get('/:matchId', authenticateToken, async (req: AuthRequest, res: Respons
     }
 
     const { matchId } = (req as any).params;
+    console.log('Fetching messages for match:', matchId);
     const messages = await db.getMessagesForMatch(matchId);
+    console.log('Messages:', messages);
 
-    res.json(messages);
+    res.json({ messages: messages || [] });
   } catch (error: any) {
+    console.error('Error fetching messages:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -40,7 +43,9 @@ router.post('/:matchId', authenticateToken, async (req: AuthRequest, res: Respon
       return res.status(400).json({ error: 'Message content is required' });
     }
 
+    console.log('Sending message to match:', matchId);
     const message = await db.sendMessage(matchId, req.user.student_id, content);
+    console.log('Message created:', message);
 
     // Find the other user in the match and send notification
     const match = await db.getMatchById(matchId);
@@ -56,8 +61,9 @@ router.post('/:matchId', authenticateToken, async (req: AuthRequest, res: Respon
       );
     }
 
-    res.status(201).json(message);
+    res.status(201).json({ message: message });
   } catch (error: any) {
+    console.error('Error sending message:', error);
     res.status(500).json({ error: error.message });
   }
 });

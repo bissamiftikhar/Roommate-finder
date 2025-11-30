@@ -6,7 +6,7 @@ const router = Router();
 
 /**
  * GET /notifications
- * Get notifications for current user
+ * Get notifications for current user (student or admin)
  */
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -14,7 +14,17 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const notifications = await db.getNotificationsForStudent(req.user.student_id);
+    console.log('📬 Getting notifications for user:', req.user);
+    // For admins, use admin_id; for students, use student_id
+    const userId = req.user.admin_id || req.user.student_id;
+    console.log('📬 Resolved userId:', userId, '(admin_id:', req.user.admin_id, ', student_id:', req.user.student_id, ')');
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID not found' });
+    }
+    
+    const notifications = await db.getNotificationsForStudent(userId);
+    console.log('📬 Found notifications:', notifications.length);
     res.json(notifications);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

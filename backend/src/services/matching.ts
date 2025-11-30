@@ -21,8 +21,13 @@ export async function calculateCompatibilityScore(
   const lifestyle1 = await db.getLifestylePreferenceByStudentId(student1Id);
   const lifestyle2 = await db.getLifestylePreferenceByStudentId(student2Id);
 
-  if (!profile1 || !profile2 || !prefs1 || !prefs2 || !lifestyle1 || !lifestyle2) {
+  if (!profile1 || !profile2) {
     return 0;
+  }
+
+  // If either user has no preferences, return a base score of 50
+  if (!prefs1 || !prefs2 || !lifestyle1 || !lifestyle2) {
+    return 50;
   }
 
   let score = 0;
@@ -103,12 +108,63 @@ export async function findMatches(
   limit: number = 10
 ): Promise<MatchWithDetails[]> {
   const prefs = await db.getBasicPreferenceByStudentId(studentId);
+  
+  // Get all match requests sent by current user to exclude them
+  const sentRequests = await db.getMatchRequestsForStudent(studentId);
+  const sentRequestUserIds = new Set(
+    sentRequests
+      .filter((req) => req.sender_id === studentId)
+      .map((req) => req.receiver_id)
+  );
+
+  // Get all confirmed matches to exclude them
+  const confirmedMatches = await db.getMatchesForStudent(studentId);
+  const confirmedMatchIds = new Set(
+    confirmedMatches.map((match) => 
+      match.student1_id === studentId ? match.student2_id : match.student1_id
+    )
+  );
+  
+  // If user has no preferences, show all other users with a base compatibility score
   if (!prefs) {
-    return [];
+    try {
+      const allProfiles = await db.searchProfiles(studentId, {});
+      
+      // Filter out users with pending requests and confirmed matches
+      const filteredProfiles = allProfiles.filter(
+        (profile) => !sentRequestUserIds.has(profile.student_id) && !confirmedMatchIds.has(profile.student_id)
+      );
+      
+      const matchesWithScores = await Promise.all(
+        filteredProfiles.slice(0, limit).map(async (profile) => {
+          const score = await calculateCompatibilityScore(studentId, profile.student_id).catch(() => 50);
+          const basicPreference = await db.getBasicPreferenceByStudentId(profile.student_id);
+          const lifestylePreference = await db.getLifestylePreferenceByStudentId(profile.student_id);
+          const student = await db.getStudentById(profile.student_id);
+
+          return {
+            match_id: '',
+            student1_id: studentId,
+            student2_id: profile.student_id,
+            compatibility_score: score,
+            status: 'active' as const,
+            matched_at: new Date().toISOString(),
+            profile,
+            basicPreference: basicPreference || undefined,
+            lifestylePreference: lifestylePreference || undefined,
+            student: student || undefined,
+          };
+        })
+      );
+
+      return matchesWithScores.sort((a, b) => b.compatibility_score - a.compatibility_score);
+    } catch (error) {
+      return [];
+    }
   }
 
   // Get all profiles that match basic criteria
-  const potentialMatches = await db.searchProfiles(studentId, {
+  let potentialMatches = await db.searchProfiles(studentId, {
     gender: prefs.gender_preference,
     ageMin: prefs.age_min,
     ageMax: prefs.age_max,
@@ -117,14 +173,18 @@ export async function findMatches(
     location: prefs.location_preference || undefined,
   });
 
+  // Filter out users with pending requests and confirmed matches
+  potentialMatches = potentialMatches.filter(
+    (profile) => !sentRequestUserIds.has(profile.student_id) && !confirmedMatchIds.has(profile.student_id)
+  );
+
   // Calculate compatibility for each and sort
   const matchesWithScores = await Promise.all(
     potentialMatches.map(async (profile) => {
-      const score = await calculateCompatibilityScore(studentId, profile.student_id);
+      const score = await calculateCompatibilityScore(studentId, profile.student_id).catch(() => 50);
       const basicPreference = await db.getBasicPreferenceByStudentId(profile.student_id);
-      const lifestylePreference = await db.getLifestylePreferenceByStudentId(
-        profile.student_id
-      );
+      const lifestylePreference = await db.getLifestylePreferenceByStudentId(profile.student_id);
+      const student = await db.getStudentById(profile.student_id);
 
       return {
         match_id: '',
@@ -134,8 +194,9 @@ export async function findMatches(
         status: 'active' as const,
         matched_at: new Date().toISOString(),
         profile,
-        basicPreference: basicPreference!,
-        lifestylePreference: lifestylePreference!,
+        basicPreference: basicPreference || undefined,
+        lifestylePreference: lifestylePreference || undefined,
+        student: student || undefined,
       };
     })
   );

@@ -226,6 +226,15 @@ router.post('/report', authenticateToken, async (req: AuthRequest, res: Response
     }
 
     const report = await db.createReport(req.user.student_id, reported_id, reason);
+    
+    // Notify all admins about the new report
+    const reportedUser = await db.getProfileByStudentId(reported_id);
+    const reportedEmail = reportedUser ? (await db.getStudentById(reported_id))?.student_email : 'Unknown';
+    await db.notifyAllAdmins(
+      'system',
+      `New user report: ${reportedEmail?.split('@')[0] || 'User'} has been reported for: ${reason.substring(0, 50)}...`
+    );
+    
     res.status(201).json(report);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
