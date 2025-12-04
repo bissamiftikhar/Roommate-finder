@@ -304,7 +304,8 @@ export function AdminUsersView() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDelete} 
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="hover:bg-red-700"
+              style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
             >
               Delete
             </AlertDialogAction>

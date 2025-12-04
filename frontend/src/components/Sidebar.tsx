@@ -50,8 +50,8 @@ export function Sidebar({ user, currentView, onViewChange, onLogout }: SidebarPr
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg">
-            <Users className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+            <img src="/logo1.png" alt="LiviSync Logo" className="w-9 h-9 object-contain" />
           </div>
           <div className="flex-1">
             <h1 style={{

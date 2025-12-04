@@ -22,13 +22,16 @@ export function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-4">
       <Card className="w-full max-w-md border-0 shadow-2xl rounded-2xl">
-        <CardHeader className="space-y-1 flex flex-col items-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white rounded-t-2xl py-8">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg">
-            <Users className="w-8 h-8 text-indigo-600" />
-          </div>
+        <CardHeader className="space-y-0 flex flex-col items-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white rounded-t-2xl py-8">
+              <img
+                src="/logo.png"
+                alt="LiviSync Logo"
+                style={{ height: '200px' }}
+                className="w-auto mb-0 drop-shadow-md"
+              />
           <CardTitle className="text-center text-2xl text-white">RoommateMatch</CardTitle>
           <CardDescription className="text-center font-semibold text-base" style={{ color: '#3b82f6' }}>
-            Find your perfect roommate match
+            LiviSync! Find your perfect roommate match
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-8 pb-6">
@@ -84,8 +87,8 @@ export function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProps) {
           <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
             <p className="text-xs font-semibold text-indigo-700 text-center mb-3">📝 Demo Accounts:</p>
             <div className="space-y-2 text-xs text-gray-700">
-              <p className="text-center"><span className="font-semibold">Student:</span> any email / any password</p>
-              <p className="text-center"><span className="font-semibold">Admin:</span> admin@roommate.com / any password</p>
+              <p className="text-center"><span className="font-semibold">Student:</span> harisfayyaz@gmail.com / haris123</p>
+              <p className="text-center"><span className="font-semibold">Admin:</span> admin@livisync.com / admin123</p>
             </div>
           </div>
         </CardContent>
