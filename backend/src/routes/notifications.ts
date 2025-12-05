@@ -14,19 +14,22 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    console.log('📬 Getting notifications for user:', req.user);
-    // For admins, use admin_id; for students, use student_id
+    const isAdmin = Boolean(req.user.admin_id);
     const userId = req.user.admin_id || req.user.student_id;
-    console.log('📬 Resolved userId:', userId, '(admin_id:', req.user.admin_id, ', student_id:', req.user.student_id, ')');
-    
+    console.log('📬 Notifications fetch — isAdmin:', isAdmin, 'userId:', userId);
+
     if (!userId) {
       return res.status(400).json({ error: 'User ID not found' });
     }
-    
-    const notifications = await db.getNotificationsForStudent(userId);
-    console.log('📬 Found notifications:', notifications.length);
-    res.json(notifications);
+
+    const notifications = isAdmin
+      ? await db.getNotificationsForAdmin(userId)
+      : await db.getNotificationsForStudent(userId);
+
+    console.log('📬 Found notifications:', notifications?.length || 0);
+    res.json(notifications || []);
   } catch (error: any) {
+    console.error('Notifications GET error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -59,6 +62,20 @@ router.post('/test-self', authenticateToken, async (req: AuthRequest, res: Respo
 
     res.json({ success: true, created: data });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin-only: insert a test notification for all admins
+router.post('/test-admin', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user?.admin_id) {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+    await db.notifyAllAdmins('system', 'TEST: Admin broadcast notification');
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('test-admin error:', error);
     res.status(500).json({ error: error.message });
   }
 });

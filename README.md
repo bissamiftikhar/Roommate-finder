@@ -89,7 +89,14 @@ A full-stack web application for university students to find compatible roommate
    ```
 
    Create `.env.local` file:
-   ```env
+   Creates admin: `admin@livisync.com` / `admin123`
+
+## 🔐 Demo Accounts
+
+- Student: `harisfayyaz@gmail.com` / `haris123`
+- Admin: `admin@livisync.com` / `admin123`
+
+Shown on the login page for quick access.
    VITE_API_URL=http://localhost:3000/api
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -171,6 +178,13 @@ Compatibility score (0-100) based on:
 - Guest Policy: 5%
 
 ## 🐛 Troubleshooting
+**Admin notifications empty:**
+- Ensure you are logged in with a fresh token (logout/login)
+- Call `POST /api/notifications/test-self` to verify DB insert and UI wiring
+
+**Branding/logo not visible:**
+- Place your logo at `frontend/public/logo.png`
+- Used in login, register, and dashboard sidebar avatar
 
 **Backend won't start:**
 - Check port 3000: `lsof -i :3000`

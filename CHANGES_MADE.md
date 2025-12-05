@@ -121,7 +121,25 @@ The following backup files were created (in case you need to revert):
 
 ## Database State
 Database was cleaned to contain **only the admin account**:
-- Email: `admin@roommate.com`
-- Password: `password123`
+- Email: `admin@livisync.com`
+- Password: `admin123`
 
 You can now manually register students and test real functionality!
+
+## Additional Recent Changes
+
+### UI/Branding Updates
+- Login page: replaced header icon with `frontend/public/logo.png`; tuned logo size and spacing
+- Register page: added the same logo in the header
+- Sidebar (student/admin): replaced top-left avatar icon with the logo sized to fit the circle
+
+### Demo Credentials (for quick testing)
+- Student: `harisfayyaz@gmail.com` / `haris123`
+- Admin: `admin@livisync.com` / `admin123`
+
+### Admin Delete Dialog Visibility
+- Ensured the Delete button in `AdminUsersView` is visibly red with white text by forcing inline styles to avoid theme collisions
+
+### Notifications Debugging
+- Added `POST /api/notifications/test-self` endpoint to insert a test notification for the authenticated user
+- Note: Admin JWTs include `admin_id`; students include `student_id`. If admin notifications are empty, logout/login to refresh the token
