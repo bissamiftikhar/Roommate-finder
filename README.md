@@ -201,6 +201,12 @@ Compatibility score (0-100) based on:
 - Run `backend/schema.txt` in SQL Editor
 - Disable RLS for development
 
+## 🤖 GitHub Copilot in Android Studio
+
+If you are working in Android Studio and want to use GitHub Copilot (GitHub Pro agents), see the step-by-step guide:
+
+📄 [GITHUB_COPILOT_ANDROID_STUDIO.md](./GITHUB_COPILOT_ANDROID_STUDIO.md)
+
 ## 👥 Author
 
 Bissam Iftikhar - [GitHub](https://github.com/bissamiftikhar)
